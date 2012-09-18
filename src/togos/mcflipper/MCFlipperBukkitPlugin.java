@@ -45,7 +45,7 @@ public class MCFlipperBukkitPlugin extends JavaPlugin implements Listener
 			return name+"\t"+worldName+"\t"+x+","+y+","+z;
 		}
 		
-		static final Pattern FDPAT = Pattern.compile("([^\t]+)\t([^\t]+)\t(\\d+),(\\d+),(\\d+)");
+		static final Pattern FDPAT = Pattern.compile("([^\t]+)\t([^\t]+)\t([\\+\\-]?\\d+),([\\+\\-]?\\d+),([\\+\\-]?\\d+)");
 		
 		static FlipperData fromString( String fd ) {
 			Matcher m = FDPAT.matcher(fd);
