@@ -1,0 +1,30 @@
+This plugin demonstrates flipping levers programatically.
+
+== Issues ==
+
+When flipping levers in unloaded areas of the world, only certain
+effects in the same chunk containing the lever will take place:
+
+- Only components (redstone, etc) in the same chunk as the switch are affected
+
+- Only non-delayed reactions occur (so repeaters won't work and redstone lamps
+  won't turn off)
+
+To work around these limitations, you can create redstone circuits that touch
+but do not affect the circuit with the switch that are activated when a player
+comes near, e.g. with a pressure plate or minecart track plate.  For example:
+
+    +---L---+-+       L = lever
+    |   |   | |       m = lamp
+  ttpttt\tttttpt      t = track
+        t   |         \ = track switch
+        p---+         p = track pressure plate
+        t         - + | = redstone dust 
+        t
+        t
+        t
+
+If flipping the lever does not immediately affect the track switch (e.g.
+because it's in a different chunk), running over any of the pressure
+plates will cause Minecraft to recalculate the power on the wires coming
+from the switch and your minecart will be routed properly.
