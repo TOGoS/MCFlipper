@@ -1,0 +1,21 @@
+name: MCFlipper
+main: togos.mcflipper.MCFlipperBukkitPlugin
+version: 0.1
+commands:
+  make-flipper:
+     description: Creates a flipper at the current location.
+     usage: |
+       /make-flipper <name> (for players)
+       /make-flipper <name> <world> <x> <y> <z> (for admins)
+  warp-to-flipper:
+     description: Warp yourself to the named flipper.
+     usage: /warp-to-flipper <name>
+  set-flipper:
+     description: Set the state of a flipper.
+     usage: /set-flipper <name> {on|off}
+  list-flippers:
+     description: List all flippers.
+     usage: /list-flippers
+  reload-flippers:
+     description: Reload all flippers from flippers.txt.
+     usage: /reload-flippers

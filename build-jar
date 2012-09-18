@@ -1,0 +1,9 @@
+#!/bin/sh
+
+rm -rf jar
+mkdir jar
+cd jar
+ln ../plugin.yml .
+cp -al ../bin/* .
+cp -al ../src/* .
+zip -r - . >../MCFlipper.jar
