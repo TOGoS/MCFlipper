@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -98,21 +99,33 @@ public class MCFlipperBukkitPlugin extends JavaPlugin implements Listener
 		}
 	}
 	
+	class FlipperState {
+		public final String flipperName;
+		public final boolean state;
+		
+		public FlipperState( String id, boolean state ) {
+			this.flipperName = id;
+			this.state = state;
+		}
+	}
+	
 	boolean modifiedSinceSave = false;
 	HashMap<String,FlipperData> flipperData = new HashMap<String,FlipperData>();
+	HashMap<String,List<FlipperState>> stateSets = new HashMap<String,List<FlipperState>>();
 	
 	@Override public void onEnable() {
-		getLogger().info(getClass().getName()+" enabled.");
+		super.onEnable();
 		getServer().getPluginManager().registerEvents(this, this);
 		load();
 	}
 	
 	@Override public void onDisable() {
-		getLogger().info(getClass().getName()+" disabled.");
+		super.onDisable();
 	}
 	
 	public void load() {
 		flipperData.clear();
+		stateSets.clear();
 		File dataDir = this.getDataFolder();
 		File flipperFile = new File(dataDir+"/flippers.txt");
 		if( !flipperFile.exists() ) {
@@ -138,6 +151,48 @@ public class MCFlipperBukkitPlugin extends JavaPlugin implements Listener
 			}
 		} catch( IOException e ) {
 			getLogger().warning("Failed to load flipper data from "+flipperFile+"; "+e.getMessage());
+		}
+		
+		File ssFile = new File(dataDir+"/statesets.txt");
+		if( ssFile.exists() ) try {
+			BufferedReader r = new BufferedReader( new FileReader(ssFile) );
+			List<FlipperState> cSet = null;
+			String line;
+			
+			int lineNumber = 0;
+			while( (line = r.readLine()) != null ) {
+				++lineNumber;
+				if( line.isEmpty() ) continue;
+				
+				if( line.startsWith("=set ") ) {
+					stateSets.put( line.substring(5), cSet = new ArrayList<FlipperState>() );
+				} else {
+					int sa = line.lastIndexOf(' ');
+					if( sa == -1 ) sa = line.lastIndexOf('\t');
+					if( sa != -1 ) {
+						if( cSet != null ) {
+							String name = line.substring(0, sa).trim();
+							String state = line.substring(sa).trim();
+							if( "on".equals(state) ) {
+								cSet.add(new FlipperState(name, true ));
+							} else if( "off".equals(state) ) {
+								cSet.add(new FlipperState(name, false));
+							} else {
+								getLogger().warning("Invalid state: '"+state+"' in "+ssFile+":"+lineNumber);
+							}
+						} else {
+							getLogger().warning("No set name given before state line in "+ssFile+":"+lineNumber+": "+line);
+						}
+					} else {
+						getLogger().warning("Unrecognised line in "+ssFile+":"+lineNumber+": "+line);
+					}
+				}
+			}
+			getLogger().info("Loaded "+stateSets.size()+" state sets from "+ssFile);
+		} catch( IOException e ) {
+			getLogger().warning("Failed to load flipper state sets from "+ssFile+"; "+e.getMessage());
+		} else {
+			getLogger().info("No state sets loaded; "+ssFile+" does not exist");
 		}
 		
 		getLogger().info("Done loading flipper data.");
@@ -222,18 +277,14 @@ public class MCFlipperBukkitPlugin extends JavaPlugin implements Listener
 			p.teleport( f.loc );
 			return true;
 		} else if( "set-flipper".equals(cmdName) ) {
-			if( args.length < 2 ) {
-				sender.sendMessage("Usage: "+label+" <flipper-name> {on|off}");
-				return false;
-			}
-			String flipperName = args[0];
-			Flipper f = getFlipper(flipperName);
-			if( f == null ) {
-				sender.sendMessage("No such flipper: '"+flipperName+"'");
+			if( args.length < 1 ) {
+				sender.sendMessage("Usage: "+label+" <flipper-name> [{on|off}]");
 				return false;
 			}
 			boolean state;
-			if( "on".equalsIgnoreCase(args[1]) ) {
+			if( args.length == 1 ) {
+				state = true;
+			} else if( "on".equalsIgnoreCase(args[1]) ) {
 				state = true;
 			} else if( "off".equalsIgnoreCase(args[1]) ) {
 				state = false;
@@ -241,11 +292,38 @@ public class MCFlipperBukkitPlugin extends JavaPlugin implements Listener
 				sender.sendMessage("Invalid flipper state: '"+args[1]+"' (try 'on' or 'off')");
 				return false;
 			}
-			return f.setState(state);
+			String flipperName = args[0];
+			Flipper f = getFlipper(flipperName);
+			if( f != null ) {
+				return f.setState(state);
+			}
+			List<FlipperState> s = stateSets.get(flipperName);
+			if( s != null ) {
+				if( state ) {
+					for( FlipperState fs : s ) {
+						f = getFlipper(fs.flipperName);
+						if( f == null ) {
+							sender.sendMessage("Warning: state set "+flipperName+" refers to non-existent flipper '"+fs.flipperName+"'");
+						} else {
+							f.setState(fs.state);
+						}
+					}
+					return true;
+				} else {
+					sender.sendMessage("Can only flip a state set 'on'");
+					return false;
+				}
+			}
+			sender.sendMessage("No such flipper or state set: '"+flipperName+"'");
+			return false;
 		} else if( "list-flippers".equals(cmdName) ) {
 			sender.sendMessage("Flippers:");
 			for( Iterator<FlipperData> i=flipperData.values().iterator(); i.hasNext(); ) {
 				sender.sendMessage( "  "+i.next().toString() );
+			}
+			sender.sendMessage("Flipper state sets:");
+			for( Iterator<String> i=stateSets.keySet().iterator(); i.hasNext(); ) {
+				sender.sendMessage( "  "+i.next() );
 			}
 			return true;
 		} else if( "make-flipper".equals(cmdName) ) {

@@ -11,8 +11,8 @@ commands:
      description: Warp yourself to the named flipper.
      usage: /warp-to-flipper <name>
   set-flipper:
-     description: Set the state of a flipper.
-     usage: /set-flipper <name> {on|off}
+     description: Set the state of a flipper or flipper state set (defaults to on).
+     usage: /set-flipper <name>  [{on|off}]
   list-flippers:
      description: List all flippers.
      usage: /list-flippers
